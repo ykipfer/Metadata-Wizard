@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import type { FieldDef } from "@/metadata.js";
 import { isFilled, LEVEL_LABELS } from "@/metadata.js";
 
-export const asString = (v: unknown): string => (typeof v === "string" ? v : "");
-export const asArray = (v: unknown): string[] =>
+const asString = (v: unknown): string => (typeof v === "string" ? v : "");
+const asArray = (v: unknown): string[] =>
   Array.isArray(v) ? v.map((x) => String(x)) : [];
 
 /** Normalize a field value for display and diff comparison. */
@@ -233,15 +233,12 @@ function FieldInput({ def, value, themes, onChange }: FieldInputProps) {
               <button
                 key={theme}
                 type="button"
-                onClick={() =>
-                  onChange(
-                    active
-                      ? selected.filter((t) => t !== theme).length
-                        ? selected.filter((t) => t !== theme)
-                        : undefined
-                      : [...selected, theme],
-                  )
-                }
+                onClick={() => {
+                  const next = active
+                    ? selected.filter((t) => t !== theme)
+                    : [...selected, theme];
+                  onChange(next.length ? next : undefined);
+                }}
                 className={`text-[12px] px-2.5 py-1 rounded-full border ${
                   active
                     ? "border-violet-500 bg-violet-100 dark:bg-violet-950 text-violet-800 dark:text-violet-200 font-medium"

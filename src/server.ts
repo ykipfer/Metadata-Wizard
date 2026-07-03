@@ -8,7 +8,7 @@ import {
   toMarkdownChecklist,
   toOdsMetas,
 } from "./metadata.js";
-import { DOMAIN, datasetPortalUrl, escapeOdsql, odsFetch, stripHtml } from "./ods.js";
+import { DOMAIN, escapeOdsql, odsFetch, stripHtml } from "./ods.js";
 
 const sourceSchema = z
   .object({
@@ -135,8 +135,7 @@ const server = new McpServer(
         }),
         fetchThemes(),
       ]);
-      const metas = dataset.metas ?? {};
-      const existingDraft = fromOdsMetas(metas);
+      const existingDraft = fromOdsMetas(dataset.metas ?? {});
       const check = completeness(existingDraft);
       const summary = [
         `Datensatz ${dataset_id} («${existingDraft.title_de ?? "ohne Titel"}») geladen.`,
@@ -149,11 +148,12 @@ const server = new McpServer(
         "Erzeuge nun einen verbesserten Entwurf und öffne show_metadata_editor mit draft + existing.",
       ].join("\n");
       return {
+        // existing_draft already carries every editable field (incl. language
+        // variants), so the raw `metas` tree is not repeated here.
         structuredContent: {
           dataset_id,
-          portal_url: datasetPortalUrl(dataset_id),
+          portal_url: `https://${DOMAIN}/explore/dataset/${encodeURIComponent(dataset_id)}/`,
           existing_draft: existingDraft,
-          metas,
           fields: (dataset.fields ?? []).map((f: any) => ({
             name: f.name,
             type: f.type,
@@ -178,8 +178,11 @@ const server = new McpServer(
         "improved metadata as `draft` (German, plain text). For an existing dataset also " +
         "pass the unchanged `existing_draft` from load_dataset_context as `existing` — " +
         "this enables the side-by-side diff so the user can accept or reject each " +
-        "suggestion. The user reviews, edits and exports the result in the view; the " +
-        "current state of their edits is shared back with you automatically.",
+        "suggestion. For new, not yet published data (e.g. a file uploaded in chat), " +
+        "derive the draft from its structure and sample rows, omit `existing`, and set " +
+        "source to {type: 'upload', label: '<file name>'}. The user reviews, edits and " +
+        "exports the result in the view; the current state of their edits is shared " +
+        "back with you automatically.",
       inputSchema: {
         draft: metadataDraftSchema.describe("The proposed metadata draft"),
         existing: metadataDraftSchema
@@ -243,9 +246,6 @@ const server = new McpServer(
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: false,
-      },
-      _meta: {
-        "openai/widgetAccessible": true,
       },
     },
     async ({ draft, source }) => {

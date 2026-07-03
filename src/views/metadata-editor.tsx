@@ -1,10 +1,11 @@
 import "@/index.css";
 
 import { useMemo } from "react";
-import { useLayout, useViewState } from "skybridge/web";
+import { useDisplayMode, useLayout, useViewState } from "skybridge/web";
 import { useToolInfo } from "@/helpers.js";
 import type { MetadataDraft, RequirementLevel } from "@/metadata.js";
 import {
+  FIELDS,
   completeness,
   fieldsByLevel,
   isFilled,
@@ -47,6 +48,7 @@ const STEPS: { label: string; level?: RequirementLevel; intro: string }[] = [
 
 export default function MetadataEditor() {
   const { theme } = useLayout();
+  const [displayMode, setDisplayMode] = useDisplayMode();
   const { output } = useToolInfo<"show_metadata_editor">();
   const [state, setState] = useViewState<EditorState>({});
 
@@ -102,7 +104,18 @@ export default function MetadataEditor() {
       <div className="flex flex-col gap-4 p-4 md:p-6 bg-zinc-50 dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-zinc-800">
         {/* Header */}
         <div className="flex flex-col gap-1">
-          <h1 className="text-lg font-semibold">Metadaten-Assistent</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-lg font-semibold">Metadaten-Assistent</h1>
+            <button
+              type="button"
+              onClick={() =>
+                setDisplayMode(displayMode === "fullscreen" ? "inline" : "fullscreen")
+              }
+              className="text-[12px] px-2.5 py-1 rounded-md border border-zinc-300 dark:border-zinc-600 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              {displayMode === "fullscreen" ? "Verkleinern" : "Vollbild"}
+            </button>
+          </div>
           <p className="text-[13px] text-zinc-500">
             {source?.label
               ? source.type === "dataset"
@@ -227,9 +240,8 @@ function ExportStep({
     () => toMarkdownChecklist(draft, { label: sourceLabel }),
     [draft, sourceLabel],
   );
-  const filledFields = ["mandatory", "recommended", "optional"].flatMap((level) =>
-    fieldsByLevel(level as RequirementLevel).filter((f) => isFilled(draft[f.key])),
-  );
+  // FIELDS is already ordered mandatory → recommended → optional.
+  const filledFields = FIELDS.filter((f) => isFilled(draft[f.key]));
 
   return (
     <div className="flex flex-col gap-4">

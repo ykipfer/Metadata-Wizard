@@ -7,11 +7,7 @@ const rawDomain = process.env.DATA_PORTAL_DOMAIN ?? "data.gr.ch";
 export const DOMAIN = rawDomain
   .replace(/^https?:\/\//, "")
   .replace(/\/+$/, "");
-export const BASE_URL = `https://${DOMAIN}/api/explore/v2.1`;
-
-export function datasetPortalUrl(datasetId: string): string {
-  return `https://${DOMAIN}/explore/dataset/${encodeURIComponent(datasetId)}/`;
-}
+const BASE_URL = `https://${DOMAIN}/api/explore/v2.1`;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

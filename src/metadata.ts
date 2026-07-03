@@ -14,7 +14,7 @@ import { z } from "zod";
 // Draft schema (tool input & view state)
 // ---------------------------------------------------------------------------
 
-export const draftShape = {
+const draftShape = {
   title_de: z.string().optional().describe("Titel des Datensatzes (Deutsch)"),
   description_de: z
     .string()

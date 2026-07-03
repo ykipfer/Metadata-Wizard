@@ -62,6 +62,6 @@ src/
 
 - ✅ Phase 0 — Scaffold (SkyBridge v1.2.3, ODS-Client)
 - ✅ Phase 1 — Verbesserungs-MVP (Diff-Editor, Vollständigkeits-Score, Export)
-- ⬜ Phase 2 — Neu-Generierung aus Uploads, kontrollierte Vokabulare verfeinern
+- ✅ Phase 2 — Neu-Generierung aus Uploads (Editor ohne Bestand), Fullscreen-Modus
 - ⬜ Phase 3 — Mehrsprachigkeit (it/rm/en), Usability-Test
 - ⬜ Phase 4 — Validierung (pySHACL), Write-back (siehe Plan)
