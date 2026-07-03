@@ -63,5 +63,6 @@ src/
 - ✅ Phase 0 — Scaffold (SkyBridge v1.2.3, ODS-Client)
 - ✅ Phase 1 — Verbesserungs-MVP (Diff-Editor, Vollständigkeits-Score, Export)
 - ✅ Phase 2 — Neu-Generierung aus Uploads (Editor ohne Bestand), Fullscreen-Modus
-- ⬜ Phase 3 — Mehrsprachigkeit (it/rm/en), Usability-Test
+- ✅ Phase 3 — Sprach-Tabs de/it/en mit Übersetzungsvorschlag (Usability-Test mit
+  Laien steht noch aus; data.gr.ch kennt keine `_rm`-Feldvarianten, daher kein rm-Tab)
 - ⬜ Phase 4 — Validierung (pySHACL), Write-back (siehe Plan)

@@ -1,16 +1,23 @@
 import "@/index.css";
 
 import { useMemo } from "react";
-import { useDisplayMode, useLayout, useViewState } from "skybridge/web";
+import {
+  useDisplayMode,
+  useLayout,
+  useSendFollowUpMessage,
+  useViewState,
+} from "skybridge/web";
 import { useToolInfo } from "@/helpers.js";
 import type { MetadataDraft, RequirementLevel } from "@/metadata.js";
 import {
   FIELDS,
+  VARIANT_LANGS,
   completeness,
   fieldsByLevel,
   isFilled,
   toMarkdownChecklist,
   toOdsMetas,
+  variantKey,
 } from "@/metadata.js";
 import CopyBlock, { CopyButton } from "./components/copy-block.js";
 import FieldCard, { displayValue } from "./components/field-card.js";
@@ -49,6 +56,7 @@ const STEPS: { label: string; level?: RequirementLevel; intro: string }[] = [
 export default function MetadataEditor() {
   const { theme } = useLayout();
   const [displayMode, setDisplayMode] = useDisplayMode();
+  const sendFollowUp = useSendFollowUpMessage();
   const { output } = useToolInfo<"show_metadata_editor">();
   const [state, setState] = useViewState<EditorState>({});
 
@@ -104,17 +112,30 @@ export default function MetadataEditor() {
       <div className="flex flex-col gap-4 p-4 md:p-6 bg-zinc-50 dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-zinc-800">
         {/* Header */}
         <div className="flex flex-col gap-1">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <h1 className="text-lg font-semibold">Metadaten-Assistent</h1>
-            <button
-              type="button"
-              onClick={() =>
-                setDisplayMode(displayMode === "fullscreen" ? "inline" : "fullscreen")
-              }
-              className="text-[12px] px-2.5 py-1 rounded-md border border-zinc-300 dark:border-zinc-600 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            >
-              {displayMode === "fullscreen" ? "Verkleinern" : "Vollbild"}
-            </button>
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={() =>
+                  sendFollowUp(
+                    "Übersetze die deutschen Metadaten aus dem aktuellen Bearbeitungsstand des Editors (Titel, Beschreibung, Schlagworte) ins Italienische und Englische. Öffne danach den Editor erneut: Rufe show_metadata_editor mit dem aktuellen Entwurf auf, ergänzt um title_it/title_en, description_it/description_en und keyword_it/keyword_en; existing, source und available_themes unverändert übergeben.",
+                  )
+                }
+                className="text-[12px] px-2.5 py-1 rounded-md border border-zinc-300 dark:border-zinc-600 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                Übersetzung vorschlagen
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setDisplayMode(displayMode === "fullscreen" ? "inline" : "fullscreen")
+                }
+                className="text-[12px] px-2.5 py-1 rounded-md border border-zinc-300 dark:border-zinc-600 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                {displayMode === "fullscreen" ? "Verkleinern" : "Vollbild"}
+              </button>
+            </div>
           </div>
           <p className="text-[13px] text-zinc-500">
             {source?.label
@@ -189,12 +210,12 @@ export default function MetadataEditor() {
               <FieldCard
                 key={def.key}
                 def={def}
-                value={draft[def.key]}
-                proposal={proposal?.[def.key]}
-                existing={existing?.[def.key]}
+                draft={draft}
+                proposal={proposal}
+                existing={existing}
                 diffMode={diffMode}
                 themes={themes}
-                onChange={(value) => setField(def.key, value)}
+                onChange={setField}
               />
             ))}
           </div>
@@ -240,8 +261,17 @@ function ExportStep({
     () => toMarkdownChecklist(draft, { label: sourceLabel }),
     [draft, sourceLabel],
   );
-  // FIELDS is already ordered mandatory → recommended → optional.
-  const filledFields = FIELDS.filter((f) => isFilled(draft[f.key]));
+  // FIELDS is already ordered mandatory → recommended → optional; multilingual
+  // fields contribute one row per filled language variant.
+  const rows = FIELDS.filter((f) => isFilled(draft[f.key])).flatMap((f) => [
+    { label: f.odsField, value: displayValue(draft[f.key]) },
+    ...(f.multilingual ? VARIANT_LANGS : [])
+      .filter((l) => isFilled(draft[variantKey(f.key, l)]))
+      .map((l) => ({
+        label: f.odsField.replace("(de)", `(${l})`),
+        value: displayValue(draft[variantKey(f.key, l)]),
+      })),
+  ]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -255,23 +285,20 @@ function ExportStep({
 
       {/* Per-field copy list for the backoffice */}
       <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 divide-y divide-zinc-200 dark:divide-zinc-700 overflow-hidden">
-        {filledFields.map((f) => {
-          const value = displayValue(draft[f.key]);
-          return (
-            <div
-              key={f.key}
-              className="flex items-center justify-between gap-3 px-3 py-2 bg-white dark:bg-zinc-900"
-            >
-              <div className="min-w-0">
-                <div className="text-[12px] text-zinc-500">{f.odsField}</div>
-                <div className="text-[13px] truncate" title={value}>
-                  {value}
-                </div>
+        {rows.map(({ label, value }) => (
+          <div
+            key={label}
+            className="flex items-center justify-between gap-3 px-3 py-2 bg-white dark:bg-zinc-900"
+          >
+            <div className="min-w-0">
+              <div className="text-[12px] text-zinc-500">{label}</div>
+              <div className="text-[13px] truncate" title={value}>
+                {value}
               </div>
-              <CopyButton text={value} />
             </div>
-          );
-        })}
+            <CopyButton text={value} />
+          </div>
+        ))}
       </div>
 
       <CopyBlock title="Checkliste fürs Backoffice (Markdown)" text={markdown} />

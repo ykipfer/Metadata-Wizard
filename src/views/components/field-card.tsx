@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import type { FieldDef } from "@/metadata.js";
-import { isFilled, LEVEL_LABELS } from "@/metadata.js";
+import type { DraftKey, FieldDef, MetadataDraft, VariantLang } from "@/metadata.js";
+import { isFilled, LEVEL_LABELS, VARIANT_LANGS, variantKey } from "@/metadata.js";
 
 const asString = (v: unknown): string => (typeof v === "string" ? v : "");
 const asArray = (v: unknown): string[] =>
@@ -21,19 +21,19 @@ const LEVEL_STYLES: Record<string, string> = {
 
 interface FieldCardProps {
   def: FieldDef;
-  value: unknown;
-  /** The value suggested by the assistant (initial draft). */
-  proposal?: unknown;
-  /** The currently published value (enables the diff block when it differs). */
-  existing?: unknown;
+  draft: MetadataDraft;
+  /** The draft suggested by the assistant (initial tool input). */
+  proposal?: MetadataDraft;
+  /** The currently published metadata (enables the diff block when it differs). */
+  existing?: MetadataDraft;
   diffMode: boolean;
   themes: string[];
-  onChange: (value: unknown) => void;
+  onChange: (key: DraftKey, value: unknown) => void;
 }
 
 export default function FieldCard({
   def,
-  value,
+  draft,
   proposal,
   existing,
   diffMode,
@@ -41,14 +41,21 @@ export default function FieldCard({
   onChange,
 }: FieldCardProps) {
   const [showHelp, setShowHelp] = useState(false);
-  const filled = isFilled(value);
+  // Ephemeral UI focus: which language tab is open (values live in the draft).
+  const [lang, setLang] = useState<"de" | VariantLang>("de");
+  const key = lang === "de" ? def.key : variantKey(def.key, lang);
+  const value = draft[key];
+  const fieldProposal = proposal?.[key];
+  const fieldExisting = existing?.[key];
+  // The mandatory/filled badge follows the leading German value.
+  const filled = isFilled(draft[def.key]);
   const hasSuggestion =
     diffMode &&
-    proposal !== undefined &&
-    displayValue(proposal) !== displayValue(existing);
+    fieldProposal !== undefined &&
+    displayValue(fieldProposal) !== displayValue(fieldExisting);
   const current = displayValue(value);
-  const usingProposal = hasSuggestion && current === displayValue(proposal);
-  const usingExisting = hasSuggestion && current === displayValue(existing);
+  const usingProposal = hasSuggestion && current === displayValue(fieldProposal);
+  const usingExisting = hasSuggestion && current === displayValue(fieldExisting);
 
   return (
     <div
@@ -114,11 +121,11 @@ export default function FieldCard({
               Bisher
             </span>
             <span className="whitespace-pre-wrap">
-              {displayValue(existing) || <em className="text-zinc-400">leer</em>}
+              {displayValue(fieldExisting) || <em className="text-zinc-400">leer</em>}
             </span>
             <button
               type="button"
-              onClick={() => onChange(existing ?? undefined)}
+              onClick={() => onChange(key, fieldExisting ?? undefined)}
               className={`self-start mt-1 text-[12px] px-2 py-1 rounded-md border ${
                 usingExisting
                   ? "border-violet-500 text-violet-700 dark:text-violet-300 font-medium"
@@ -135,11 +142,11 @@ export default function FieldCard({
               Vorschlag
             </span>
             <span className="whitespace-pre-wrap">
-              {displayValue(proposal) || <em className="text-zinc-400">leer</em>}
+              {displayValue(fieldProposal) || <em className="text-zinc-400">leer</em>}
             </span>
             <button
               type="button"
-              onClick={() => onChange(proposal)}
+              onClick={() => onChange(key, fieldProposal)}
               className={`self-start mt-1 text-[12px] px-2 py-1 rounded-md border ${
                 usingProposal
                   ? "border-violet-500 text-violet-700 dark:text-violet-300 font-medium"
@@ -152,7 +159,33 @@ export default function FieldCard({
         </div>
       )}
 
-      <FieldInput def={def} value={value} themes={themes} onChange={onChange} />
+      {def.multilingual && (
+        <div className="flex gap-1">
+          {(["de", ...VARIANT_LANGS] as const).map((l) => (
+            <button
+              key={l}
+              type="button"
+              onClick={() => setLang(l)}
+              className={`text-[11px] px-2 py-0.5 rounded-md border uppercase ${
+                lang === l
+                  ? "border-violet-500 bg-violet-100 dark:bg-violet-950 text-violet-800 dark:text-violet-200 font-medium"
+                  : "border-zinc-300 dark:border-zinc-600 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              }`}
+            >
+              {l}
+              {isFilled(draft[l === "de" ? def.key : variantKey(def.key, l)]) && " ✓"}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <FieldInput
+        key={key}
+        def={def}
+        value={value}
+        themes={themes}
+        onChange={(v) => onChange(key, v)}
+      />
     </div>
   );
 }

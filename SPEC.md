@@ -48,6 +48,14 @@ Neue Metadaten erstellen (Daten noch nicht publiziert):
   (`useDisplayMode`, nutzer-getriggert). Arbeitsstand liegt in `useViewState`
   (Modell sieht Edits), `data-llm` fasst Score und Lücken zusammen.
   Formularzustand lebt in der View — keine Feld-Update-Tools.
+- Mehrsprachigkeit: Titel, Beschreibung und Schlagworte haben Sprach-Tabs
+  de/it/en (de führend; data.gr.ch kennt keine `_rm`-Feldvarianten). Der
+  aktive Tab ist ephemer (`useState`), die Werte liegen im Draft
+  (`title_it`, `keyword_en`, …). Der Button «Übersetzung vorschlagen»
+  triggert das Host-Modell via `useSendFollowUpMessage`: übersetzen und
+  show_metadata_editor mit ergänztem Entwurf erneut aufrufen. Score und
+  Pflicht-Badges folgen weiterhin nur den deutschen Werten; Export
+  (Checkliste, Copy-Liste, JSON) enthält gefüllte Varianten.
 
 **Tool: export_metadata**
 - Input: `{ draft, source? }`

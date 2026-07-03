@@ -77,6 +77,16 @@ export const metadataDraftSchema = z.object(draftShape);
 export type MetadataDraft = z.infer<typeof metadataDraftSchema>;
 export type DraftKey = keyof MetadataDraft;
 
+/**
+ * Variant languages beyond the leading German. data.gr.ch publishes metadata
+ * in de/it/en (`metadata_languages`); Romansh has no `_rm` field variants on
+ * the platform. Variant keys follow the ODS naming convention `<field>_<lang>`.
+ */
+export const VARIANT_LANGS = ["it", "en"] as const;
+export type VariantLang = (typeof VARIANT_LANGS)[number];
+export const variantKey = (key: DraftKey, lang: VariantLang): DraftKey =>
+  key.replace(/_de$/, `_${lang}`) as DraftKey;
+
 // ---------------------------------------------------------------------------
 // Controlled vocabularies
 // ---------------------------------------------------------------------------
@@ -172,6 +182,8 @@ export interface FieldDef {
   example?: string;
   input: InputKind;
   options?: VocabularyOption[];
+  /** Has `_it`/`_en` variants editable via language tabs (German leads). */
+  multilingual?: boolean;
 }
 
 export const FIELDS: FieldDef[] = [
@@ -184,6 +196,7 @@ export const FIELDS: FieldDef[] = [
     help: "Kurz und sprechend: Was wird gezeigt, für welches Gebiet, ab wann? Keine internen Abkürzungen.",
     example: "Campingplätze Angebot nach Tourismusregionen, seit 2008",
     input: "text",
+    multilingual: true,
   },
   {
     key: "description_de",
@@ -195,6 +208,7 @@ export const FIELDS: FieldDef[] = [
     example:
       "Der Datensatz enthält seit 2008 die jährliche Anzahl Campingbetriebe, Stellplätze und Logiernächte je Tourismusregion. Quelle ist die Parahotelleriestatistik (PASTA) des Bundesamts für Statistik.",
     input: "textarea",
+    multilingual: true,
   },
   {
     key: "publisher_de",
@@ -244,6 +258,7 @@ export const FIELDS: FieldDef[] = [
     help: "3–6 Begriffe, kleingeschrieben, jeweils ein Konzept. Auch Synonyme, die im Titel nicht vorkommen.",
     example: "camping, tourismus, logiernächte",
     input: "tags",
+    multilingual: true,
   },
   {
     key: "update_frequency",
@@ -501,14 +516,24 @@ export function toMarkdownChecklist(
     "Werte der Reihe nach im Opendatasoft-Backoffice eintragen.",
     "",
   ];
+  const fmt = (v: unknown) => (Array.isArray(v) ? v.join(", ") : String(v));
   for (const level of ["mandatory", "recommended", "optional"] as const) {
     const fields = fieldsByLevel(level).filter((f) => isFilled(draft[f.key]));
     if (!fields.length) continue;
     lines.push(`## ${LEVEL_LABELS[level]}`, "");
     for (const field of fields) {
-      const value = draft[field.key];
-      const rendered = Array.isArray(value) ? value.join(", ") : String(value);
-      lines.push(`- [ ] **${field.odsField}**`, `  ${rendered}`, "");
+      lines.push(`- [ ] **${field.odsField}**`, `  ${fmt(draft[field.key])}`, "");
+      if (!field.multilingual) continue;
+      for (const lang of VARIANT_LANGS) {
+        const value = draft[variantKey(field.key, lang)];
+        if (isFilled(value)) {
+          lines.push(
+            `- [ ] **${field.odsField.replace("(de)", `(${lang})`)}**`,
+            `  ${fmt(value)}`,
+            "",
+          );
+        }
+      }
     }
   }
   const missing = completeness(draft).missingMandatory;
