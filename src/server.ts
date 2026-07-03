@@ -129,7 +129,9 @@ const server = new McpServer(
     },
     async ({ dataset_id }) => {
       const [dataset, records, themes] = await Promise.all([
-        odsFetch(`/catalog/datasets/${encodeURIComponent(dataset_id)}`, { lang: "de" }),
+        // No lang param: lang makes ODS localize the response and drop the
+        // *_de/_it/_en language variants the draft needs.
+        odsFetch(`/catalog/datasets/${encodeURIComponent(dataset_id)}`),
         odsFetch(`/catalog/datasets/${encodeURIComponent(dataset_id)}/records`, {
           limit: 20,
         }),
